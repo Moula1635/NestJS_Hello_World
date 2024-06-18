@@ -10,14 +10,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup SSH key
-      run: |
-        echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
-        chmod 400 key.pem
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Deploy on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_PUBLIC_DNS }} << 'EOF'
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_PUBLIC_DNS }} << 'EOF'
           # Clone the repository if it does not exist, otherwise pull the latest changes
           if [ ! -d "/home/${{ secrets.EC2_USER }}/NestJS_Hello_World" ]; then
             git clone https://github.com/Moula1635/NestJS_Hello_World.git /home/${{ secrets.EC2_USER }}/NestJS_Hello_World
@@ -30,18 +30,15 @@ jobs:
           cd /home/${{ secrets.EC2_USER }}/NestJS_Hello_World
 
           # Install dependencies
-          npm install
+          npm install --production  # Use --production flag to skip dev dependencies if not needed
 
           # Build the application
-          npm run build
+          npm run build  # Adjust the build command as per your project's setup
 
-          # Stop the previous instance of the application if it’s running
-          pm2 stop nestjs-hello-world || true
+          # Restart the application using PM2
+          pm2 restart nestjs-hello-world || pm2 start dist/main.js --name "nestjs-hello-world"
 
-          # Start the application
-          pm2 start dist/main.js --name "nestjs-hello-world"
-
-          # Save the PM2 process list and respawn PM2 on reboot
+          # Save PM2 process list and set PM2 to start on boot
           pm2 save
           pm2 startup
         EOF
