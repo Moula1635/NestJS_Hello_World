@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Adjust this based on your branch name
+      - main 
 
 jobs:
   deploy:
@@ -12,6 +12,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Install Node.js and npm
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install PM2
+        run: npm install pm2 -g
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
