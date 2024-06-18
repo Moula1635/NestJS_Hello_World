@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
 on:
   push:
@@ -6,36 +6,24 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v2
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
       with:
-        node-version: '14'
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Run build
-      run: npm run build
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Deploy to EC2
-      env:
-        EC2_PUBLIC_DNS: ${{ secrets.EC2_PUBLIC_DNS }}
-        EC2_USER: ${{ secrets.EC2_USER }}
-        KEY: ${{ secrets.KEY }}
       run: |
-        echo "${{ secrets.KEY }}" > key.pem
-        chmod 400 key.pem
-        scp -o StrictHostKeyChecking=no -i key.pem -r * ${{ secrets.EC2_USER }}@${{ secrets.EC2_PUBLIC_DNS }}:/home/${{ secrets.EC2_USER }}/nestjs-hello-world
-        ssh -o StrictHostKeyChecking=no -i key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_PUBLIC_DNS }} << 'EOF'
-          cd /home/${{ secrets.EC2_USER }}/nestjs-hello-world
+        ssh -o StrictHostKeyChecking=no ec2-user@your-ec2-public-dns << 'EOF'
+          cd ~/nestjs-hello-world
+          git pull origin main
           npm install
-          pm2 stop all || true
-          pm2 start dist/main.js --name "nestjs-hello-world"
+          npm run build
+          pm2 restart nestjs-app
         EOF
