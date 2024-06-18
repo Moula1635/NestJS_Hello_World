@@ -18,12 +18,19 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
+    - name: Add known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ec2-13-60-36-98.eu-north-1.compute.amazonaws.com >> ~/.ssh/known_hosts
+
+        
+
     - name: Deploy to EC2
       run: |
-        ssh -o StrictHostKeyChecking=no ec2-user@your-ec2-public-dns << 'EOF'
-          cd ~/nestjs-hello-world
+        ssh -o StrictHostKeyChecking=no ec2-user@ec2-xx-xxx-xxx-xxx.compute-1.amazonaws.com << 'EOF'
+          cd ~/NestJS_Hello_World
           git pull origin main
           npm install
           npm run build
-          pm2 restart nestjs-app
+          pm2 restart nestjs-app || pm2 start dist/main.js --name "nestjs-app"
         EOF
